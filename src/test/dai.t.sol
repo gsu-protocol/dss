@@ -24,9 +24,9 @@ import "ds-test/test.sol";
 import "../dai.sol";
 
 contract TokenUser {
-    Dai  token;
+    GSUCoin token;
 
-    constructor(Dai token_) public {
+    constructor(GSUCoin token_) public {
         token = token_;
     }
 
@@ -92,7 +92,7 @@ contract DaiTest is DSTest {
     uint constant initialBalanceThis = 1000;
     uint constant initialBalanceCal = 100;
 
-    Dai token;
+    GSUCoin token;
     Hevm hevm;
     address user1;
     address user2;
@@ -102,13 +102,13 @@ contract DaiTest is DSTest {
     uint fee = 1;
     uint nonce = 0;
     uint deadline = 0;
-    address cal = 0x29C76e6aD8f28BB1004902578Fb108c507Be341b;
+    address cal = 0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1;
     address del = 0xdd2d5D3f7f1b35b7A0601D6A00DbB7D44Af58479;
-    bytes32 r = 0x8e30095d9e5439a4f4b8e4b5c94e7639756474d72aded20611464c8f002efb06;
-    bytes32 s = 0x49a0ed09658bc768d6548689bcbaa430cefa57846ef83cb685673a9b9a575ff4;
-    uint8 v = 27;
-    bytes32 _r = 0x85da10f8af2cf512620c07d800f8e17a2a4cd2e91bf0835a34bf470abc6b66e5;
-    bytes32 _s = 0x7e8e641e5e8bef932c3a55e7365e0201196fc6385d942c47d749bf76e73ee46f;
+    bytes32 r = 0xfad3a09a257bad3c911b6e481678844d6f94d525a13c051300118b52e0fc51e3;
+    bytes32 s = 0x1053bd4b652d6736d14e3bc85e0851546368e9ee6963970cf1d23ed321b8dc65;
+    uint8 v = 28;
+    bytes32 _r = 0x5ec8fdc78c0eeba12cac9544511db19893701459eede8c52c01144f19d808bbe;
+    bytes32 _s = 0x5a844bf2edd276113f46554b6af87fd9bb6d9c1917daebf1f04feac11f13da69;
     uint8 _v = 27;
 
 
@@ -123,8 +123,8 @@ contract DaiTest is DSTest {
         self = address(this);
     }
 
-    function createToken() internal returns (Dai) {
-        return new Dai(99);
+    function createToken() internal returns (GSUCoin) {
+        return new GSUCoin(99);
     }
 
     function testSetupPrecondition() public {
@@ -287,7 +287,7 @@ contract DaiTest is DSTest {
     }
 
     function testDomain_Separator() public {
-        assertEq(token.DOMAIN_SEPARATOR(), 0x68a9504c1a7fba795f7730732abab11cb5fa5113edd2396392abd5c1bbda4043);
+        assertEq(token.DOMAIN_SEPARATOR(), 0x8d0cc74096e35296d29978e4e0fe345d225b4a159abe4220bfc43b547e6c2213);
     }
 
     function testPermit() public {
@@ -296,6 +296,7 @@ contract DaiTest is DSTest {
         token.permit(cal, del, 0, 0, true, v, r, s);
         assertEq(token.allowance(cal, del),uint(-1));
         assertEq(token.nonces(cal),1);
+
     }
 
     function testFailPermitAddress0() public {
