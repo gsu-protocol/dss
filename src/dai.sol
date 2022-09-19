@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// dai.sol -- Dai Stablecoin ERC-20 Token
+/// dai.sol -- GSU Coin ERC-20 Token
 
 // Copyright (C) 2017, 2018, 2019 dbrock, rain, mrchico
 
@@ -23,7 +23,7 @@ pragma solidity ^0.6.12;
 // It doesn't use LibNote anymore.
 // New deployments of this contract will need to include custom events (TO DO).
 
-contract Dai {
+contract GSUCoin {
     // --- Auth ---
     mapping (address => uint) public wards;
     function rely(address guy) external auth { wards[guy] = 1; }
@@ -34,8 +34,8 @@ contract Dai {
     }
 
     // --- ERC20 Data ---
-    string  public constant name     = "Dai Stablecoin";
-    string  public constant symbol   = "DAI";
+    string  public constant name     = "GSU Coin";
+    string  public constant symbol   = "GSUc";
     string  public constant version  = "1";
     uint8   public constant decimals = 18;
     uint256 public totalSupply;
