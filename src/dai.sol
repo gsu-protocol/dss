@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// dai.sol -- Dai Stablecoin ERC-20 Token
+/// dai.sol -- GSU Coin ERC-20 Token
 
 // Copyright (C) 2017, 2018, 2019 dbrock, rain, mrchico
 
@@ -23,7 +23,7 @@ pragma solidity ^0.6.12;
 // It doesn't use LibNote anymore.
 // New deployments of this contract will need to include custom events (TO DO).
 
-contract Dai {
+contract GSUCoin {
     // --- Auth ---
     mapping (address => uint) public wards;
     function rely(address guy) external auth { wards[guy] = 1; }
@@ -34,8 +34,8 @@ contract Dai {
     }
 
     // --- ERC20 Data ---
-    string  public constant name     = "Dai Stablecoin";
-    string  public constant symbol   = "DAI";
+    string  public constant name     = "GSU Coin";
+    string  public constant symbol   = "GSUc";
     string  public constant version  = "1";
     uint8   public constant decimals = 18;
     uint256 public totalSupply;
@@ -47,12 +47,29 @@ contract Dai {
     event Approval(address indexed src, address indexed guy, uint wad);
     event Transfer(address indexed src, address indexed dst, uint wad);
 
+    // --- Transfer Fee Data ---
+    address public feeAccount;
+    uint256 public min;
+    uint256 public max;
+    uint256 public pct;
+    event Transfer(address indexed src, address indexed dst, uint wad, uint fee);
+    event FeeAccountUpdated(address indexed newFeeAccount);
+    event FeeUpdated(uint256 min, uint256 max, uint256 pct);
+
     // --- Math ---
     function add(uint x, uint y) internal pure returns (uint z) {
         require((z = x + y) >= x);
     }
     function sub(uint x, uint y) internal pure returns (uint z) {
         require((z = x - y) <= x);
+    }
+    function mul(uint x, uint y) internal pure returns (uint z) {
+        require(y == 0 || (z = x * y) / y == x);
+    }
+
+    function div(uint x, uint y) internal pure returns (uint z) {
+        require(y > 0);
+        return x / y;    
     }
 
     // --- EIP712 niceties ---
@@ -78,14 +95,30 @@ contract Dai {
     function transferFrom(address src, address dst, uint wad)
         public returns (bool)
     {
-        require(balanceOf[src] >= wad, "Dai/insufficient-balance");
+        uint256 _fee = calculateTransferFee(wad);
+        require(balanceOf[src] >= wad+_fee, "Dai/insufficient-balance");
         if (src != msg.sender && allowance[src][msg.sender] != uint(-1)) {
             require(allowance[src][msg.sender] >= wad, "Dai/insufficient-allowance");
             allowance[src][msg.sender] = sub(allowance[src][msg.sender], wad);
+
+            // deduct fee from allowance 
+            if(_fee > 0){
+                require(allowance[src][msg.sender] >= _fee, "Dai/insufficient-allowance");
+                allowance[src][msg.sender] = sub(allowance[src][msg.sender], _fee);
+            }
         }
+
         balanceOf[src] = sub(balanceOf[src], wad);
         balanceOf[dst] = add(balanceOf[dst], wad);
         emit Transfer(src, dst, wad);
+
+        // Charge fee from src and add to feeAccount 
+        if(_fee > 0){
+            balanceOf[src] = sub(balanceOf[src], _fee);
+            balanceOf[feeAccount] = add(balanceOf[feeAccount], _fee);
+            emit Transfer(src, dst, wad, _fee);
+        }
+
         return true;
     }
     function mint(address usr, uint wad) external auth {
@@ -143,5 +176,43 @@ contract Dai {
         uint wad = allowed ? uint(-1) : 0;
         allowance[holder][spender] = wad;
         emit Approval(holder, spender, wad);
+    }
+
+    function setFeeAccount(address _feeAccount) external auth {
+        feeAccount = _feeAccount;
+        emit FeeAccountUpdated(feeAccount);
+    }
+
+    function setFee(uint256 _min, uint256 _max, uint256 _pct) external auth {
+        // solhint-disable-next-line max-line-length
+        require(_min <= _max, "Dai/invalid-min-fee");
+        require(_max >= _min, "Dai/invalid-max-fee");
+        require(_pct <= 100 ether, "Dai/invalid-pct-fee");
+        
+        min=_min;
+        max=_max;
+        pct=_pct;
+
+        emit FeeUpdated(min, max, pct);
+    }
+
+     /**
+     * @dev calculate transfer fee aginst `wad`.
+     * @param wad Value in wei to be to calculate fee.
+     * @return Number of tokens in wei to paid for transfer fee.
+     */
+    function calculateTransferFee(uint256 wad) public view returns(uint256) {
+        uint256 divisor = mul(100, 1 ether);
+        uint256 _fee = div(mul(pct, wad), divisor);
+
+        if (_fee < min) {
+            _fee = min;   
+        }
+
+        else if (_fee > max) {
+            _fee = max;
+        }
+        
+        return _fee;
     }
 }
