@@ -97,6 +97,7 @@ contract DaiTest is DSTest {
     address user1;
     address user2;
     address self;
+    address feeAccount;
 
     uint amount = 2;
     uint fee = 1;
@@ -121,6 +122,7 @@ contract DaiTest is DSTest {
         user1 = address(new TokenUser(token));
         user2 = address(new TokenUser(token));
         self = address(this);
+        feeAccount = address(new TokenUser(token));
     }
 
     function createToken() internal returns (GSUCoin) {
@@ -320,5 +322,109 @@ contract DaiTest is DSTest {
     function testFailReplay() public {
         token.permit(cal, del, 0, 0, true, v, r, s);
         token.permit(cal, del, 0, 0, true, v, r, s);
+    }
+
+    function testFeeCutBelowMin() public {
+        // unit256 feePCT = 1.000000000000000000;
+        uint feePCT = 100000000000000000;  //0.1%
+        uint minFee = 10;
+        uint maxFee = 25;
+
+        token.setFee(minFee, maxFee,feePCT);
+        token.setFeeAccount(feeAccount);
+
+        assertEq(token.min(),minFee);
+        assertEq(token.max(),maxFee);
+        assertEq(token.pct(),feePCT);
+
+        token.approve(user1, uint(250));
+
+        uint amountToTransfer = 200;
+
+        TokenUser(user1).doTransferFrom(self, user2, amountToTransfer);
+
+        assertEq(token.balanceOf(self), initialBalanceThis - amountToTransfer - minFee );
+
+        assertEq(token.balanceOf(feeAccount),  minFee );
+
+
+    }
+
+
+     function testFeeCutAboveMax() public {
+        // unit256 feePCT = 1.000000000000000000;
+        uint feePCT = 50000000000000000000; // 50%
+        uint minFee = 10;
+        uint maxFee = 25;
+
+        token.setFee(minFee, maxFee,feePCT);
+
+        token.setFeeAccount(feeAccount);
+
+        assertEq(token.min(),minFee);
+        assertEq(token.max(),maxFee);
+        assertEq(token.pct(),feePCT);
+
+        token.approve(user1, uint(250));
+
+        uint amountToTransfer = 200;
+
+        TokenUser(user1).doTransferFrom(self, user2, amountToTransfer);
+
+        assertEq(token.balanceOf(self), initialBalanceThis - amountToTransfer - maxFee );
+
+        assertEq(token.balanceOf(feeAccount),  maxFee );
+    }
+
+
+     function testFeeCutPCT() public {
+        // unit256 feePCT = 1.000000000000000000;
+        uint feePCT = 10000000000000000000; //10%
+        uint minFee = 10;
+        uint maxFee = 25;
+
+        token.setFee(minFee, maxFee,feePCT);
+
+        token.setFeeAccount(feeAccount);
+
+        assertEq(token.min(),minFee);
+        assertEq(token.max(),maxFee);
+        assertEq(token.pct(),feePCT);        
+
+        token.approve(user1, uint(250));
+
+        uint amountToTransfer = 200;
+
+        TokenUser(user1).doTransferFrom(self, user2, amountToTransfer);
+
+        assertEq(token.balanceOf(self), initialBalanceThis - amountToTransfer - 20 );
+
+        assertEq(token.balanceOf(feeAccount),  20 );
+    }
+
+
+     function testFailInsufficientFundsTransfersWithFee() public {
+        // unit256 feePCT = 1.000000000000000000;
+        uint feePCT = 10000000000000000000; //10%
+        uint minFee = 10;
+        uint maxFee = 25;
+
+        token.setFee(minFee, maxFee,feePCT);
+
+        token.setFeeAccount(feeAccount);
+
+        assertEq(token.min(),minFee);
+        assertEq(token.max(),maxFee);
+        assertEq(token.pct(),feePCT);        
+
+        token.approve(user1, uint(200));
+
+        uint amountToTransfer = 200;
+
+        TokenUser(user1).doTransferFrom(self, user2, amountToTransfer);
+
+        assertEq(token.balanceOf(self), initialBalanceThis - amountToTransfer - 20 );
+
+        assertEq(token.balanceOf(feeAccount),  20 );
     }
 }
